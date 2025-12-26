@@ -12,8 +12,6 @@ WINDOW_WIDTH = 1366
 WINDOW_HEIGHT = 768
 IMAGE_FOLDER_URL = "../w-slide/public/temp/"
 DESTINATION_FOLDER = "tmp/"
-WITH_RESIZE = False #set to true when adding new photos
-SKIP_COPY = True #if everything's ok, set to true, otherwise move to false
 
 FONT_SIZE_SM = 40
 FONT_SIZE = 60
@@ -35,6 +33,8 @@ MOSAIC_KIND_MULTI_IMAGE = "multi_image" # Not implemented yet
 ANIMATION_TYPE_SLIDE_IN = "slide_in"
 ANIMATION_TYPE_FLIP = "flip"
 ANIMATION_TYPE_CROSSFADE = "crossfade"
+
+DEBUG = False
 #endregion Constants
 
 #region Init
@@ -97,9 +97,8 @@ def get_orientation(image_url):
     return 0
 
 def resize_all_images(folder_url, destination_folder, width, height):
-    if os.path.exists(destination_folder):
-        shutil.rmtree(destination_folder)
-    os.mkdir(destination_folder)
+    if not os.path.exists(destination_folder):
+        os.mkdir(destination_folder)
 
     for root, dirs, files in os.walk(folder_url):
         for file in files:
@@ -111,13 +110,18 @@ def resize_all_images(folder_url, destination_folder, width, height):
 def resize_image(root, file, destination_folder, width, height):
     image_url = os.path.join(root, file)
     destination_image_url = os.path.join(destination_folder, file)
-    try:
-        with Image.open(image_url) as img:
-            img = ImageOps.exif_transpose(img)
-            img.thumbnail((width, height), Image.Resampling.LANCZOS)
-            img.save(destination_image_url)
-    except IOError:
-        print("Error resizing image:", image_url)
+    if DEBUG: print("Processing image:", image_url)
+    if not os.path.exists(destination_image_url):
+        if DEBUG: print("Resizing image:", image_url)
+        try:
+            with Image.open(image_url) as img:
+                img = ImageOps.exif_transpose(img)
+                img.thumbnail((width, height), Image.Resampling.LANCZOS)
+                img.save(destination_image_url)
+        except IOError:
+            print("Error resizing image:", image_url)
+    else:
+        if DEBUG: print("Image already exists:", destination_image_url)
 #endregion ImageFunctions
 
 class AnimatedMosaic:
@@ -382,12 +386,7 @@ class AnimatedMosaic:
             if self.current_display_surface:
                 surface.blit(self.current_display_surface, self.rect)
 
-
-if WITH_RESIZE:
-    resize_all_images(IMAGE_FOLDER_URL, DESTINATION_FOLDER, WINDOW_WIDTH, WINDOW_HEIGHT)
-else:
-    if not SKIP_COPY:
-        copy_folder(IMAGE_FOLDER_URL, DESTINATION_FOLDER)
+resize_all_images(IMAGE_FOLDER_URL, DESTINATION_FOLDER, WINDOW_WIDTH, WINDOW_HEIGHT)
 
 load_images(DESTINATION_FOLDER)
 current_image_idx = 0
